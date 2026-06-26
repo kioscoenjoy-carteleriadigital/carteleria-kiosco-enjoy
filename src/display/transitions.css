@@ -1,0 +1,56 @@
+/* ================================================================
+   Transiciones entre slides — Kiosco Enjoy Cartelería Digital
+   ================================================================ */
+
+.slide-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.slide-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- FADE ---- */
+.trans-fade .slide-layer {
+  opacity: 0;
+  transition: opacity 0.7s ease-in-out;
+}
+.trans-fade .slide-layer.active {
+  opacity: 1;
+}
+.trans-fade .slide-layer.leaving {
+  opacity: 0;
+}
+
+/* ---- SLIDE (horizontal, izquierda → derecha) ---- */
+.trans-slide .slide-layer {
+  transform: translateX(100%);
+  transition: transform 0.6s cubic-bezier(.2,.7,.3,1);
+}
+.trans-slide .slide-layer.active {
+  transform: translateX(0);
+}
+.trans-slide .slide-layer.leaving {
+  transform: translateX(-100%);
+  transition: transform 0.6s cubic-bezier(.2,.7,.3,1);
+}
+
+/* ---- ZOOM (zoom + fade) ---- */
+.trans-zoom .slide-layer {
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.trans-zoom .slide-layer.active {
+  opacity: 1;
+  transform: scale(1);
+}
+.trans-zoom .slide-layer.leaving {
+  opacity: 0;
+  transform: scale(0.96);
+}

@@ -1,0 +1,19 @@
+@import './design-system/colors_and_type.css';
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font-body);
+  color: var(--fg1);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Scrollbar (admin) ---- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ink-200); }
+::-webkit-scrollbar-thumb { background: var(--ink-400); border-radius: var(--r-pill); }
+
+/* ---- Utility ---- */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }

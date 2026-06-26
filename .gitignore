@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+
+# Variables de entorno (NUNCA commitear)
+.env.local
+.env.*.local
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Archivos temporales del proyecto
+design-system-temp/
+
+# Logs
+*.log
+npm-debug.log*
