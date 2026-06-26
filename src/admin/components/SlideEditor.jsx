@@ -128,30 +128,66 @@ export default function SlideEditor({ slide, products, onSave, onClose }) {
         {type === 'placa_oferta' && (
           <>
             <div className="adm-field">
-              <label className="adm-label">Etiqueta</label>
-              <input className="adm-input" value={config.eyebrow ?? 'OFERTA'} onChange={e => setC('eyebrow', e.target.value)} placeholder="OFERTA" />
+              <label className="adm-label">Foto del producto (opcional)</label>
+              <MediaUploader folder="placas" accept="image/*" onUploaded={url => setC('image_url', url)}
+                label="Subí foto del producto — aparece como fondo animado" />
+              {config.image_url && (
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 6, color: 'var(--coke-red)' }}
+                  onClick={() => setC('image_url', '')}>✕ Quitar imagen</button>
+              )}
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Fondo (sin imagen)</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ v: 'red', label: '🔴 Rojo' }, { v: 'dark', label: '⚫ Oscuro' }].map(o => (
+                  <button key={o.v} className={`btn btn-sm ${(config.bg ?? 'red') === o.v ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setC('bg', o.v)}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Etiqueta (ej: OFERTA, NUEVO, 2x1)</label>
+              <input className="adm-input" value={config.eyebrow ?? ''} onChange={e => setC('eyebrow', e.target.value)} placeholder="OFERTA" />
             </div>
             <div className="adm-field">
               <label className="adm-label">Nombre del producto</label>
               <input className="adm-input" value={config.title ?? ''} onChange={e => setC('title', e.target.value)} placeholder="Coca-Cola 2.25L" />
             </div>
             <div className="adm-field">
-              <label className="adm-label">Descripción (opcional)</label>
+              <label className="adm-label">Descripción / subtítulo (opcional)</label>
               <input className="adm-input" value={config.subtitle ?? ''} onChange={e => setC('subtitle', e.target.value)} placeholder="Retornable · bien fría 🧊" />
             </div>
-            <div className="adm-field">
-              <label className="adm-label">Precio ($)</label>
-              <input className="adm-input" type="number" value={config.price ?? ''} onChange={e => setC('price', e.target.value)} placeholder="2150" />
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div className="adm-field" style={{ flex: 1 }}>
+                <label className="adm-label">Precio ($)</label>
+                <input className="adm-input" type="number" value={config.price ?? ''} onChange={e => setC('price', e.target.value)} placeholder="2150" />
+              </div>
+              <div className="adm-field" style={{ flex: 1 }}>
+                <label className="adm-label">Etiqueta precio (ej: SOLO, DESDE)</label>
+                <input className="adm-input" value={config.priceLabel ?? ''} onChange={e => setC('priceLabel', e.target.value)} placeholder="SOLO" />
+              </div>
             </div>
             <div className="adm-field">
-              <label className="adm-label">Unidad (opcional)</label>
+              <label className="adm-label">Unidad (opcional, ej: 2.25L, el kg)</label>
               <input className="adm-input" value={config.unit ?? ''} onChange={e => setC('unit', e.target.value)} placeholder="2.25L" />
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Texto al pie (opcional — dejalo vacío para no mostrar nada)</label>
+              <input className="adm-input" value={config.footer ?? ''} onChange={e => setC('footer', e.target.value)} placeholder="ej: Válido hasta el domingo" />
             </div>
           </>
         )}
 
         {type === 'placa_combo' && (
           <>
+            <div className="adm-field">
+              <label className="adm-label">Foto de fondo (opcional)</label>
+              <MediaUploader folder="placas" accept="image/*" onUploaded={url => setC('image_url', url)} label="Subí foto para el fondo" />
+              {config.image_url && (
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 6, color: 'var(--coke-red)' }}
+                  onClick={() => setC('image_url', '')}>✕ Quitar imagen</button>
+              )}
+            </div>
             <div className="adm-field">
               <label className="adm-label">Nombre del combo</label>
               <input className="adm-input" value={config.label ?? ''} onChange={e => setC('label', e.target.value)} placeholder="🔥 COMBO PREVIA" />
@@ -168,14 +204,31 @@ export default function SlideEditor({ slide, products, onSave, onClose }) {
               <label className="adm-label">Precio final ($)</label>
               <input className="adm-input" type="number" value={config.priceNew ?? ''} onChange={e => setC('priceNew', e.target.value)} placeholder="8990" />
             </div>
+            <div className="adm-field">
+              <label className="adm-label">Texto al pie (opcional)</label>
+              <input className="adm-input" value={config.footer ?? ''} onChange={e => setC('footer', e.target.value)} placeholder="ej: Solo este finde" />
+            </div>
           </>
         )}
 
         {type === 'placa_cartelera' && (
           <>
             <div className="adm-field">
+              <label className="adm-label">Tema</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ v: 'light', label: '⬜ Claro' }, { v: 'dark', label: '⬛ Oscuro' }].map(o => (
+                  <button key={o.v} className={`btn btn-sm ${(config.theme ?? 'light') === o.v ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setC('theme', o.v)}>{o.label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="adm-field">
               <label className="adm-label">Título</label>
               <input className="adm-input" value={config.title ?? 'OFERTAS DE LA SEMANA'} onChange={e => setC('title', e.target.value)} />
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Badge / etiqueta header (ej: HOY, SEMANA)</label>
+              <input className="adm-input" value={config.badge ?? ''} onChange={e => setC('badge', e.target.value)} placeholder="HOY" />
             </div>
             <div className="adm-field">
               <label className="adm-label">Productos / precios</label>
@@ -194,6 +247,10 @@ export default function SlideEditor({ slide, products, onSave, onClose }) {
               <button className="btn btn-secondary btn-sm" onClick={addRow}>
                 <Plus size={14} /> Agregar fila
               </button>
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Texto al pie (opcional)</label>
+              <input className="adm-input" value={config.footer ?? ''} onChange={e => setC('footer', e.target.value)} placeholder="ej: Pedilo por la app" />
             </div>
           </>
         )}

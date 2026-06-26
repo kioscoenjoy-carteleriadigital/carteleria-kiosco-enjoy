@@ -1,0 +1,57 @@
+/* ================================================================
+   Animaciones internas de placas — elementos que se animan
+   dentro del slide mientras está en pantalla
+   ================================================================ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.7); }
+  70%  { transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(-48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes kenBurns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+@keyframes pricePop {
+  0%   { opacity: 0; transform: scale(0.5) rotate(-4deg); }
+  60%  { transform: scale(1.08) rotate(1deg); }
+  80%  { transform: scale(0.97) rotate(0deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Clases utilitarias */
+.anim-fade-up    { animation: fadeUp    0.55s cubic-bezier(.2,.7,.3,1) both; }
+.anim-fade-in    { animation: fadeIn    0.5s ease both; }
+.anim-pop-in     { animation: popIn     0.6s cubic-bezier(.2,.7,.3,1) both; }
+.anim-slide-left { animation: slideLeft 0.5s cubic-bezier(.2,.7,.3,1) both; }
+.anim-price-pop  { animation: pricePop  0.7s cubic-bezier(.2,.7,.3,1) both; }
+.anim-ken-burns  { animation: kenBurns  8s ease-in-out both; }
+
+/* Delays escalonados */
+.delay-1 { animation-delay: 0.15s; }
+.delay-2 { animation-delay: 0.35s; }
+.delay-3 { animation-delay: 0.6s; }
+.delay-4 { animation-delay: 0.9s; }
+.delay-5 { animation-delay: 1.2s; }
