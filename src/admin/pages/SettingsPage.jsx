@@ -69,7 +69,7 @@ export default function SettingsPage({ toast }) {
           days: group.days.map(Number),
           open_time: shift.open,
           close_time: shift.close,
-          position: (group.position ?? 0) + i * 0.01,
+          position: (group.position ?? 0) * 10 + i,
         })
       }
       toast('✓ Horario guardado')
