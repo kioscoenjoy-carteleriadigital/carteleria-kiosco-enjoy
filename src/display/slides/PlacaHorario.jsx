@@ -6,18 +6,21 @@ const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
 function fmt(t) {
   if (!t) return ''
-  return t.slice(0, 5).replace(':', 'h')
+  return t.slice(0, 5) + ' hs'
 }
 
-// Agrupa filas DB por label: { label, days, shifts: [{open, close}] }
+// Agrupa filas DB por label (case-insensitive trim): { label, days, shifts: [{open, close}] }
 function groupSchedules(rows) {
   const map = new Map()
   for (const row of rows) {
-    const key = row.label + '|' + (row.days ?? []).slice().sort().join(',')
+    const key = row.label.trim().toLowerCase()
     if (!map.has(key)) {
-      map.set(key, { label: row.label, days: row.days ?? [], shifts: [], position: row.position })
+      map.set(key, { label: row.label.trim(), days: row.days ?? [], shifts: [], position: row.position ?? 0 })
     }
-    map.get(key).shifts.push({ open: row.open_time, close: row.close_time })
+    const g = map.get(key)
+    g.shifts.push({ open: row.open_time, close: row.close_time })
+    // usar el menor position como base del grupo
+    if ((row.position ?? 0) < g.position) g.position = row.position ?? 0
   }
   return [...map.values()].sort((a, b) => a.position - b.position)
 }

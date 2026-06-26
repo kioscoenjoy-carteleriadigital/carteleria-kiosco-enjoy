@@ -9,24 +9,25 @@ const TRANSITIONS = [
 ]
 const DAYS_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-// Agrupa filas DB por label+days en "grupos" con múltiples turnos
+// Agrupa filas DB por label (case-insensitive trim) en "grupos" con múltiples turnos
 function groupSchedules(rows) {
   const map = new Map()
   for (const row of rows) {
-    const key = row.label + '|' + (row.days ?? []).slice().sort().join(',')
+    const key = row.label.trim().toLowerCase()
     if (!map.has(key)) {
       map.set(key, {
         key,
-        label: row.label,
+        label: row.label.trim(),
         days: row.days ?? [],
         shifts: [],
         rowIds: [],
-        position: row.position,
+        position: row.position ?? 0,
       })
     }
     const g = map.get(key)
     g.shifts.push({ open: row.open_time?.slice(0, 5) ?? '08:00', close: row.close_time?.slice(0, 5) ?? '22:00' })
     g.rowIds.push(row.id)
+    if ((row.position ?? 0) < g.position) g.position = row.position ?? 0
   }
   return [...map.values()]
 }
