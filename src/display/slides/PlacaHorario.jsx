@@ -1,25 +1,22 @@
 import { useEffect, useState } from 'react'
 import { getSchedules } from '../../lib/supabase'
-import logoW from '../../design-system/assets/logo-white.svg'
-
-const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+import logoR from '../../design-system/assets/logo-red.svg'
+import './placa-animations.css'
 
 function fmt(t) {
   if (!t) return ''
   return t.slice(0, 5) + ' hs'
 }
 
-// Agrupa filas DB por label (case-insensitive trim): { label, days, shifts: [{open, close}] }
 function groupSchedules(rows) {
   const map = new Map()
   for (const row of rows) {
     const key = row.label.trim().toLowerCase()
     if (!map.has(key)) {
-      map.set(key, { label: row.label.trim(), days: row.days ?? [], shifts: [], position: row.position ?? 0 })
+      map.set(key, { label: row.label.trim(), shifts: [], position: row.position ?? 0 })
     }
     const g = map.get(key)
     g.shifts.push({ open: row.open_time, close: row.close_time })
-    // usar el menor position como base del grupo
     if ((row.position ?? 0) < g.position) g.position = row.position ?? 0
   }
   return [...map.values()].sort((a, b) => a.position - b.position)
@@ -39,103 +36,88 @@ function isOpen(rows) {
 }
 
 export default function PlacaHorario({ slide }) {
+  const c = slide?.placa_config ?? {}
   const [rows, setRows] = useState([])
-  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
     getSchedules().then(setRows).catch(console.error)
   }, [])
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(t)
-  }, [])
-
   const open = isOpen(rows)
   const groups = groupSchedules(rows)
-  const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
-  const dateStr = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const badgeText = c.badge || 'HORARIOS'
+  const footer = c.footer || ''
 
   return (
     <div style={{
       width: '100%', height: '100%',
-      background: open ? 'var(--black-c)' : '#1a1a1a',
+      background: 'var(--brilliant-white)',
       fontFamily: 'var(--font-display)',
       position: 'relative', overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
+      padding: '64px 56px 56px',
+      boxSizing: 'border-box',
     }}>
-      {/* Círculo decorativo */}
-      <div style={{
-        position: 'absolute', width: 900, height: 900,
-        borderRadius: '50%',
-        background: open ? 'var(--coke-red)' : 'var(--ink-700)',
-        opacity: 0.12, top: -250, right: -250,
-      }} />
-
-      {/* Logo */}
-      <img src={logoW} alt="Kiosco Enjoy" style={{
-        position: 'absolute', top: 64, left: 56, height: 80,
-      }} />
-
-      {/* Hora grande */}
-      <div style={{
-        fontSize: 240, fontWeight: 900, fontStyle: 'italic',
-        color: '#fff', letterSpacing: '-0.04em', lineHeight: 1,
-        textShadow: '0 4px 40px rgba(0,0,0,0.4)',
-      }}>
-        {timeStr}
+      {/* Header: logo + badge */}
+      <div className="anim-fade-in" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <img src={logoR} alt="Kiosco Enjoy" style={{ height: 60 }} />
+        <div style={{
+          background: 'var(--black-c)', color: '#fff',
+          fontWeight: 800, fontStyle: 'italic',
+          fontSize: 28, letterSpacing: '0.04em',
+          padding: '10px 24px', borderRadius: 8,
+        }}>
+          {badgeText}
+        </div>
       </div>
 
-      {/* Fecha */}
-      <div style={{
-        fontSize: 44, fontWeight: 600, fontStyle: 'italic',
-        color: 'rgba(255,255,255,0.6)',
-        marginTop: 16, textTransform: 'capitalize',
+      {/* Status: Estamos abiertos / cerrados */}
+      <div className="anim-fade-up delay-1" style={{
+        marginTop: 80,
+        fontWeight: 900, fontStyle: 'italic',
+        fontSize: 120, lineHeight: 0.9,
+        color: open ? 'var(--coke-red)' : 'var(--black-c)',
+        letterSpacing: '-0.02em',
       }}>
-        {dateStr}
+        {open ? 'Estamos\nabiertos' : 'Estamos\ncerrados'}
       </div>
 
-      {/* Badge ABIERTO / CERRADO */}
-      <div style={{
-        marginTop: 60,
-        background: open ? 'var(--success)' : 'var(--coke-red)',
-        color: '#fff',
-        fontWeight: 800, fontStyle: 'italic', fontSize: 56,
-        padding: '20px 64px', borderRadius: 999,
-        letterSpacing: '0.04em',
-      }}>
-        {open ? '✓ ABIERTO' : '✕ CERRADO'}
-      </div>
-
-      {/* Franjas horarias agrupadas */}
-      {groups.length > 0 && (
-        <div style={{ marginTop: 64, width: '80%' }}>
-          <div style={{
-            fontSize: 34, fontWeight: 700, fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.5)', textAlign: 'center',
-            marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.06em',
-          }}>
-            Horario de atención
-          </div>
-          {groups.map((g, i) => (
-            <div key={i} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
-              padding: '18px 0', gap: 24,
+      {/* Grupos de horario */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 40, marginTop: 40 }}>
+        {groups.map((g, i) => (
+          <div key={i} className={`anim-fade-up delay-${Math.min(i + 2, 5)}`}>
+            <div style={{
+              fontWeight: 600, fontStyle: 'italic',
+              fontSize: 34, color: 'var(--ink-500)',
+              marginBottom: 8,
             }}>
-              <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, fontSize: 36 }}>
-                {g.label}
-              </span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                {g.shifts.map((sh, j) => (
-                  <span key={j} style={{ color: '#fff', fontWeight: 800, fontStyle: 'italic', fontSize: 40, whiteSpace: 'nowrap' }}>
-                    {fmt(sh.open)} — {fmt(sh.close)}
-                  </span>
-                ))}
-              </div>
+              {g.label}
             </div>
-          ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {g.shifts.map((sh, j) => (
+                <div key={j} style={{
+                  fontWeight: 800,
+                  fontSize: groups.length > 2 ? 56 : 64,
+                  lineHeight: 1.05,
+                  color: 'var(--black-c)',
+                  letterSpacing: '-0.01em',
+                }}>
+                  {fmt(sh.open)} – {fmt(sh.close)}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer configurable */}
+      {footer && (
+        <div className="anim-fade-in delay-5" style={{
+          fontWeight: 600, fontStyle: 'italic',
+          fontSize: 28, color: 'var(--ink-400)',
+          marginTop: 'auto', paddingTop: 32,
+        }}>
+          {footer}
         </div>
       )}
     </div>

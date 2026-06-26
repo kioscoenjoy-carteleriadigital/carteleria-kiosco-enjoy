@@ -256,10 +256,19 @@ export default function SlideEditor({ slide, products, onSave, onClose }) {
         )}
 
         {type === 'placa_horario' && (
-          <div style={{ padding: '12px 0', color: 'var(--fg2)', fontSize: 14 }}>
-            El horario se toma automáticamente de la sección <strong>Configuración → Horarios</strong>.
-            No necesitás configurar nada más acá.
-          </div>
+          <>
+            <div style={{ padding: '4px 0 12px', color: 'var(--fg3)', fontSize: 13 }}>
+              El horario se toma automáticamente de <strong>Configuración → Horarios</strong>.
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Badge (esquina superior derecha)</label>
+              <input className="adm-input" value={config.badge ?? ''} onChange={e => setC('badge', e.target.value)} placeholder="HORARIOS" />
+            </div>
+            <div className="adm-field">
+              <label className="adm-label">Texto al pie (opcional)</label>
+              <input className="adm-input" value={config.footer ?? ''} onChange={e => setC('footer', e.target.value)} placeholder="ej: Pedí por la app · @kioscoenjoy" />
+            </div>
+          </>
         )}
 
         {type === 'placa_producto' && (
