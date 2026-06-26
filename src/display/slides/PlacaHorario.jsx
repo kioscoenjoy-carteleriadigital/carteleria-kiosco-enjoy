@@ -9,25 +9,38 @@ function fmt(t) {
   return t.slice(0, 5).replace(':', 'h')
 }
 
-function isOpen(schedules) {
+// Agrupa filas DB por label: { label, days, shifts: [{open, close}] }
+function groupSchedules(rows) {
+  const map = new Map()
+  for (const row of rows) {
+    const key = row.label + '|' + (row.days ?? []).slice().sort().join(',')
+    if (!map.has(key)) {
+      map.set(key, { label: row.label, days: row.days ?? [], shifts: [], position: row.position })
+    }
+    map.get(key).shifts.push({ open: row.open_time, close: row.close_time })
+  }
+  return [...map.values()].sort((a, b) => a.position - b.position)
+}
+
+function isOpen(rows) {
   const now = new Date()
   const day = now.getDay()
   const hhmm = now.getHours() * 60 + now.getMinutes()
-  for (const s of schedules) {
-    if (!s.days.includes(day)) continue
-    const [oh, om] = s.open_time.split(':').map(Number)
-    const [ch, cm] = s.close_time.split(':').map(Number)
+  for (const row of rows) {
+    if (!row.days?.includes(day)) continue
+    const [oh, om] = row.open_time.split(':').map(Number)
+    const [ch, cm] = row.close_time.split(':').map(Number)
     if (hhmm >= oh * 60 + om && hhmm < ch * 60 + cm) return true
   }
   return false
 }
 
 export default function PlacaHorario({ slide }) {
-  const [schedules, setSchedules] = useState([])
+  const [rows, setRows] = useState([])
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
-    getSchedules().then(setSchedules).catch(console.error)
+    getSchedules().then(setRows).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -35,7 +48,8 @@ export default function PlacaHorario({ slide }) {
     return () => clearInterval(t)
   }, [])
 
-  const open = isOpen(schedules)
+  const open = isOpen(rows)
+  const groups = groupSchedules(rows)
   const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
   const dateStr = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -91,8 +105,8 @@ export default function PlacaHorario({ slide }) {
         {open ? '✓ ABIERTO' : '✕ CERRADO'}
       </div>
 
-      {/* Franjas horarias */}
-      {schedules.length > 0 && (
+      {/* Franjas horarias agrupadas */}
+      {groups.length > 0 && (
         <div style={{ marginTop: 64, width: '80%' }}>
           <div style={{
             fontSize: 34, fontWeight: 700, fontStyle: 'italic',
@@ -101,18 +115,22 @@ export default function PlacaHorario({ slide }) {
           }}>
             Horario de atención
           </div>
-          {schedules.map((s, i) => (
+          {groups.map((g, i) => (
             <div key={i} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               borderBottom: '1px solid rgba(255,255,255,0.1)',
-              padding: '18px 0',
+              padding: '18px 0', gap: 24,
             }}>
               <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, fontSize: 36 }}>
-                {s.label}
+                {g.label}
               </span>
-              <span style={{ color: '#fff', fontWeight: 800, fontStyle: 'italic', fontSize: 40 }}>
-                {fmt(s.open_time)} — {fmt(s.close_time)}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                {g.shifts.map((sh, j) => (
+                  <span key={j} style={{ color: '#fff', fontWeight: 800, fontStyle: 'italic', fontSize: 40, whiteSpace: 'nowrap' }}>
+                    {fmt(sh.open)} — {fmt(sh.close)}
+                  </span>
+                ))}
+              </div>
             </div>
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Trash2, X } from 'lucide-react'
+import { Plus, Trash2, X, Clock } from 'lucide-react'
 import { getSettings, setSetting, getSchedules, upsertSchedule, deleteSchedule } from '../../lib/supabase'
 
 const TRANSITIONS = [
@@ -9,13 +9,35 @@ const TRANSITIONS = [
 ]
 const DAYS_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
-const EMPTY_SCHEDULE = { label: '', days: [], open_time: '08:00', close_time: '22:00', position: 0 }
+// Agrupa filas DB por label+days en "grupos" con múltiples turnos
+function groupSchedules(rows) {
+  const map = new Map()
+  for (const row of rows) {
+    const key = row.label + '|' + (row.days ?? []).slice().sort().join(',')
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        label: row.label,
+        days: row.days ?? [],
+        shifts: [],
+        rowIds: [],
+        position: row.position,
+      })
+    }
+    const g = map.get(key)
+    g.shifts.push({ open: row.open_time?.slice(0, 5) ?? '08:00', close: row.close_time?.slice(0, 5) ?? '22:00' })
+    g.rowIds.push(row.id)
+  }
+  return [...map.values()]
+}
+
+const EMPTY_GROUP = { label: '', days: [], shifts: [{ open: '08:00', close: '22:00' }], rowIds: [], position: 0 }
 
 export default function SettingsPage({ toast }) {
-  const [settings, setSettings]     = useState({})
-  const [schedules, setSchedules]   = useState([])
-  const [schEditor, setSchEditor]   = useState(null)
-  const [saving, setSaving]         = useState(false)
+  const [settings, setSettings]   = useState({})
+  const [schedules, setSchedules] = useState([])
+  const [editor, setEditor]       = useState(null)
+  const [saving, setSaving]       = useState(false)
 
   const load = useCallback(async () => {
     const [s, sc] = await Promise.all([getSettings(), getSchedules()])
@@ -32,21 +54,38 @@ export default function SettingsPage({ toast }) {
     toast('✓ Configuración guardada')
   }
 
-  async function handleSaveSchedule(s) {
+  // Guarda un grupo: borra filas anteriores e inserta una por turno
+  async function handleSaveGroup(group) {
     try {
-      await upsertSchedule({ ...s, days: s.days.map(Number) })
+      // Borrar filas existentes del grupo
+      for (const id of group.rowIds ?? []) {
+        await deleteSchedule(id)
+      }
+      // Insertar una fila por cada turno
+      for (let i = 0; i < group.shifts.length; i++) {
+        const shift = group.shifts[i]
+        await upsertSchedule({
+          label: group.label,
+          days: group.days.map(Number),
+          open_time: shift.open,
+          close_time: shift.close,
+          position: (group.position ?? 0) + i * 0.01,
+        })
+      }
       toast('✓ Horario guardado')
-      setSchEditor(null)
+      setEditor(null)
       load()
     } catch (e) { alert('Error: ' + e.message) }
   }
 
-  async function handleDeleteSchedule(s) {
-    if (!confirm(`¿Eliminar "${s.label}"?`)) return
-    await deleteSchedule(s.id)
+  async function handleDeleteGroup(group) {
+    if (!confirm(`¿Eliminar "${group.label}"?`)) return
+    for (const id of group.rowIds) await deleteSchedule(id)
     toast('Horario eliminado')
     load()
   }
+
+  const groups = groupSchedules(schedules)
 
   return (
     <div>
@@ -92,63 +131,100 @@ export default function SettingsPage({ toast }) {
       <div className="settings-section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h2 style={{ marginBottom: 0 }}>Horario de atención</h2>
-          <button className="btn btn-primary btn-sm" onClick={() => setSchEditor({ ...EMPTY_SCHEDULE })}>
+          <button className="btn btn-primary btn-sm" onClick={() => setEditor({ ...EMPTY_GROUP, shifts: [{ open: '08:00', close: '22:00' }], rowIds: [] })}>
             <Plus size={14} /> Agregar
           </button>
         </div>
         <div className="adm-card">
-          {schedules.length === 0 ? (
+          {groups.length === 0 ? (
             <div className="adm-empty" style={{ padding: '24px 16px' }}>
               <p>Sin horarios configurados.</p>
             </div>
-          ) : schedules.map(s => (
-            <div key={s.id} className="schedule-row">
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{s.label}</div>
-                <div style={{ fontSize: 13, color: 'var(--fg3)', marginTop: 2 }}>
-                  {s.days?.map(d => DAYS_LABELS[d]).join(', ')}
+          ) : groups.map(g => (
+            <div key={g.key} className="schedule-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+              <div style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{g.label}</div>
+                  <div style={{ fontSize: 13, color: 'var(--fg3)', marginTop: 2 }}>
+                    {g.days?.map(d => DAYS_LABELS[d]).join(', ')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditor({ ...g })}>✏️</button>
+                  <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--coke-red)' }} onClick={() => handleDeleteGroup(g)}>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 15, color: 'var(--fg1)' }}>
-                {s.open_time?.slice(0,5)} — {s.close_time?.slice(0,5)}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setSchEditor(s)}>✏️</button>
-                <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--coke-red)' }} onClick={() => handleDeleteSchedule(s)}>
-                  <Trash2 size={14} />
-                </button>
+              {/* Turnos del grupo */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 2 }}>
+                {g.shifts.map((sh, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'var(--bg2)', borderRadius: 8,
+                    padding: '6px 14px',
+                    fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14,
+                  }}>
+                    <Clock size={13} style={{ color: 'var(--coke-red)', flexShrink: 0 }} />
+                    {sh.open} — {sh.close}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {schEditor && (
-        <ScheduleModal schedule={schEditor} onSave={handleSaveSchedule} onClose={() => setSchEditor(null)} />
+      {editor && (
+        <ScheduleModal group={editor} onSave={handleSaveGroup} onClose={() => setEditor(null)} />
       )}
     </div>
   )
 }
 
-function ScheduleModal({ schedule, onSave, onClose }) {
-  const [form, setForm] = useState({ ...schedule, days: schedule.days ?? [] })
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+function ScheduleModal({ group, onSave, onClose }) {
+  const [form, setForm] = useState({
+    ...group,
+    days: group.days ?? [],
+    shifts: group.shifts?.length ? group.shifts : [{ open: '08:00', close: '22:00' }],
+  })
 
   function toggleDay(d) {
-    set('days', form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d].sort())
+    setForm(f => ({
+      ...f,
+      days: f.days.includes(d) ? f.days.filter(x => x !== d) : [...f.days, d].sort(),
+    }))
+  }
+
+  function setShift(i, k, v) {
+    setForm(f => {
+      const shifts = [...f.shifts]
+      shifts[i] = { ...shifts[i], [k]: v }
+      return { ...f, shifts }
+    })
+  }
+
+  function addShift() {
+    setForm(f => ({ ...f, shifts: [...f.shifts, { open: '08:00', close: '22:00' }] }))
+  }
+
+  function removeShift(i) {
+    setForm(f => ({ ...f, shifts: f.shifts.filter((_, j) => j !== i) }))
   }
 
   return (
     <div className="adm-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="adm-modal">
         <div className="adm-modal-header">
-          <h2>{form.id ? 'Editar horario' : 'Nuevo horario'}</h2>
+          <h2>{form.rowIds?.length ? 'Editar horario' : 'Nuevo horario'}</h2>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={20} /></button>
         </div>
+
         <div className="adm-field">
           <label className="adm-label">Nombre</label>
-          <input className="adm-input" value={form.label} onChange={e => set('label', e.target.value)} placeholder="Lunes a Viernes" />
+          <input className="adm-input" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="Lunes a Viernes" />
         </div>
+
         <div className="adm-field">
           <label className="adm-label">Días</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -159,21 +235,44 @@ function ScheduleModal({ schedule, onSave, onClose }) {
                 onClick={() => toggleDay(d)}
                 style={{ minWidth: 48 }}
               >
-                {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d]}
+                {DAYS_LABELS[d]}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div className="adm-field" style={{ flex: 1 }}>
-            <label className="adm-label">Abre</label>
-            <input className="adm-input" type="time" value={form.open_time} onChange={e => set('open_time', e.target.value)} />
+
+        <div className="adm-field">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <label className="adm-label" style={{ marginBottom: 0 }}>Turnos</label>
+            <button className="btn btn-secondary btn-sm" onClick={addShift}>
+              <Plus size={13} /> Agregar turno
+            </button>
           </div>
-          <div className="adm-field" style={{ flex: 1 }}>
-            <label className="adm-label">Cierra</label>
-            <input className="adm-input" type="time" value={form.close_time} onChange={e => set('close_time', e.target.value)} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {form.shifts.map((sh, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <label className="adm-label" style={{ fontSize: 12 }}>Abre</label>
+                  <input className="adm-input" type="time" value={sh.open} onChange={e => setShift(i, 'open', e.target.value)} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label className="adm-label" style={{ fontSize: 12 }}>Cierra</label>
+                  <input className="adm-input" type="time" value={sh.close} onChange={e => setShift(i, 'close', e.target.value)} />
+                </div>
+                {form.shifts.length > 1 && (
+                  <button
+                    className="btn btn-ghost btn-icon btn-sm"
+                    style={{ color: 'var(--coke-red)', marginTop: 20, flexShrink: 0 }}
+                    onClick={() => removeShift(i)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
+
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={() => onSave(form)}>Guardar</button>
